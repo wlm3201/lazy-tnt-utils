@@ -1,0 +1,14 @@
+pluginManagement {
+	repositories {
+		maven { url = "https://maven.fabricmc.net/" }
+		gradlePluginPortal()
+	}
+}
+
+rootProject.name = 'lazytntutils'
+
+// 多版本：每个受支持的 MC 版本对应一个子项目目录，子项目只需 gradle.properties（依赖切换）。
+// 新增版本示例：include 'v26_2' 并新建 v26_2/gradle.properties（照抄 v26_1_2 改依赖值即可，
+// 源码共用根目录 src/main，无需拷贝）。
+include 'v26_1_2'
+include 'v26_2'

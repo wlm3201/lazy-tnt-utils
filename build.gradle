@@ -1,0 +1,111 @@
+plugins {
+	id 'net.fabricmc.fabric-loom' version '1.17-SNAPSHOT' apply false
+	id 'com.diffplug.spotless' version '7.0.2'
+}
+
+// Spotless 的 Eclipse 引擎依赖需要从 Maven Central 解析，根项目本身没有仓库配置。
+repositories {
+	mavenCentral()
+}
+
+// 代码格式化。与 .vscode/settings.json 共用同一份 eclipse-formatter.xml，
+// 保证 IDE 快捷键（Shift+Alt+F）与命令行（./gradlew spotlessApply）结果完全一致，
+// 手工改动和 AI 改动不会有格式差异。
+spotless {
+	java {
+		// 源码只在仓库根目录 src/main 维护一份，显式指定以免被子项目配置带偏。
+		target 'src/main/java/**/*.java'
+		// Google Java Style —— Java 界事实标准，不可配置（就像前端的 prettier），
+		// 没有风格选项就不会有风格争论。缩进 2 空格、行宽 100。
+		googleJavaFormat('1.36.1')
+		removeUnusedImports()
+		trimTrailingWhitespace()
+		endWithNewline()
+	}
+}
+
+group   = rootProject.findProperty('maven_group') ?: 'net.orbitalstrike'
+version = rootProject.findProperty('mod_version')  ?: '1.0.0'
+
+subprojects {
+	// 26.x 起 Mojang 直接发布官方命名（非混淆）的 Minecraft，Loom 须用完整插件 id
+	// 'net.fabricmc.fabric-loom'（不再 remap、不再需要映射依赖），也不注册
+	// modImplementation，故依赖一律用 implementation。（nonObfuscated 写在各子项目
+	// gradle.properties，根配置期即可读取；如需回退支持 ≤1.21.x 的混淆版走 'fabric-loom' 分支）
+	def nonObfuscated = project.hasProperty('nonObfuscated') && project.nonObfuscated.toBoolean()
+	apply plugin: nonObfuscated ? 'net.fabricmc.fabric-loom' : 'fabric-loom'
+	apply plugin: 'maven-publish'
+
+	group   = rootProject.group
+	version = rootProject.version
+
+	repositories {
+		maven { url = "https://maven.fabricmc.net/" }
+	}
+
+	// 26.x 全系使用同一套官方 Mojang 命名，源码可跨小版本直接复用：全仓库只维护根目录
+	// 这一份 src/main，各版本子项目仅通过自身 gradle.properties 切换依赖（mc/loader/fapi）。
+	// 若将来某版本 API 变动大到无法共用源码，再引入版本覆盖源，或迁移 Stonecutter 预处理器。
+	sourceSets {
+		main {
+			java.srcDirs = [rootProject.file('src/main/java')]
+			resources.srcDirs = [rootProject.file('src/main/resources')]
+		}
+	}
+
+	def jv = (project.hasProperty('javaRelease') ? project.javaRelease : '21') as int
+
+	dependencies {
+		minecraft "com.mojang:minecraft:${project.mc}"
+		if (nonObfuscated) {
+			implementation "net.fabricmc:fabric-loader:${project.loader}"
+			implementation "net.fabricmc.fabric-api:fabric-api:${project.fapi}"
+		} else {
+			modImplementation "net.fabricmc:fabric-loader:${project.loader}"
+			modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fapi}"
+		}
+	}
+
+	processResources {
+		duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+		inputs.property "version",           project.version
+		inputs.property "minecraft_version", project.mc
+		inputs.property "loader_version",    project.loader
+		filteringCharset "UTF-8"
+		filesMatching("fabric.mod.json") {
+			expand(
+					"version":           project.version,
+					"mod_id":            rootProject.findProperty("mod_id"),
+					"mod_name":          rootProject.findProperty("mod_name"),
+					"mod_description":   rootProject.findProperty("mod_description"),
+					"mod_author":        rootProject.findProperty("mod_author"),
+					"mod_license":       rootProject.findProperty("mod_license"),
+					"mod_homepage":      rootProject.findProperty("mod_homepage"),
+					"mod_sources":       rootProject.findProperty("mod_sources"),
+					"mod_issues":        rootProject.findProperty("mod_issues"),
+					"minecraft_version": project.mc,
+					"loader_version":    project.loader
+			)
+		}
+	}
+
+	tasks.withType(JavaCompile).configureEach {
+		it.options.release = jv
+	}
+
+	java {
+		sourceCompatibility = JavaVersion.toVersion(jv)
+		targetCompatibility = JavaVersion.toVersion(jv)
+	}
+
+	jar {
+		archiveFileName = "${project.jarName}.jar"
+		from(rootProject.file("LICENSE")) {
+			rename { "LICENSE_lazytntutils" }
+		}
+	}
+}
+
+tasks.register('buildAll') {
+	dependsOn subprojects.collect { it.tasks.named('build') }
+}

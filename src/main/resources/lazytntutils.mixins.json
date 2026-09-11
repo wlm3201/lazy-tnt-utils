@@ -1,0 +1,16 @@
+{
+	"required": true,
+	"package": "net.orbitalstrike.mixin",
+	"compatibilityLevel": "JAVA_21",
+	"client": [
+		"TntEntityMixin",
+		"ItemEntityMixin",
+		"EntityHitboxDebugRendererMixin",
+		"HugeExplosionSeedParticleMixin",
+		"TntRendererMixin",
+		"IntegratedServerMixin"
+	],
+	"injectors": {
+		"defaultRequire": 1
+	}
+}
