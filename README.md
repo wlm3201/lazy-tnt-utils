@@ -30,12 +30,13 @@
 - ✅ 弱加载区块TNT不再"客户端提前爆炸消失"。
 - ✅ 弱加载区块物品不再"客户端自行运动"。
 - ✅ 弱加载区块实体分离渲染位置同步。
-- ✅ 显示碰撞箱时为TNT绘制动量箭头。
+- ✅ 显示碰撞箱时为TNT绘制动量箭头/线段。
 - ✅ 可通过命令开关。
 - ✅ 精确显示爆炸粒子。
 - ✅ 关闭TNT闪烁与变大视觉效果。
 - ✅ 显示TNT剩余爆炸刻数标签。
 - ✅ 修改渲染距离与模拟距离。
+- ✅ 解除原版Motion的±10限制。
 
 ---
 
@@ -48,6 +49,7 @@
 /lazytntutils <tnt|item> <client|server> <true|false>      # 同步开关
 /lazytntutils <view|sim> [default|<0..32>]                 # 修改视距/模距
 /lazytntutils tnt <visual|timer> [true|false]              # 开关视效/标签
+/lazytntutils tnt arrow [arrow|line|off]                   # 动量矢量画法
 ```
 
 - `client` 开关在客户端本地即时生效，写入 `config/lazytntutils-client.properties`。

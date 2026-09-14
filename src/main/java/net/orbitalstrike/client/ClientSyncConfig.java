@@ -38,6 +38,9 @@ public final class ClientSyncConfig {
   /** 是否在每颗 TNT 头顶显示剩余**游戏刻**数（纯客户端渲染，持久化）。默认开启： 生电关心刻级时序，市面上同类模组只给秒数。见 TntTickOverlayRenderer。 */
   public static boolean tntTickTimer = true;
 
+  /** TNT 动量矢量的画法（纯客户端渲染，持久化）。默认 ARROW（线段 + 箭头），见 {@link MotionArrowMode}。 */
+  public static MotionArrowMode tntMotionArrow = MotionArrowMode.ARROW;
+
   /** 服务端开关镜像（来自 SyncConfigS2CPayload，不持久化）：多人下“网络权威”分支据此判断是否仍有下发，也用于命令查询显示。默认关，与服务端默认一致。 */
   public static boolean tntServerSync = false;
 
@@ -77,6 +80,8 @@ public final class ClientSyncConfig {
     itemClientSync = parse(props, "itemClientSync", itemClientSync);
     tntNoFlashScale = parse(props, "tntNoFlashScale", tntNoFlashScale);
     tntTickTimer = parse(props, "tntTickTimer", tntTickTimer);
+    tntMotionArrow =
+        MotionArrowMode.fromId(props.getProperty("tntMotionArrow", MotionArrowMode.ARROW.id()));
   }
 
   private static boolean parse(Properties props, String key, boolean fallback) {
@@ -91,6 +96,7 @@ public final class ClientSyncConfig {
     props.setProperty("itemClientSync", Boolean.toString(itemClientSync));
     props.setProperty("tntNoFlashScale", Boolean.toString(tntNoFlashScale));
     props.setProperty("tntTickTimer", Boolean.toString(tntTickTimer));
+    props.setProperty("tntMotionArrow", tntMotionArrow.id());
     Path file = configFile();
     try {
       Files.createDirectories(file.getParent());

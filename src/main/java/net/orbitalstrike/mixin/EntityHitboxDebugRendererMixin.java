@@ -7,6 +7,8 @@ import net.minecraft.gizmos.Gizmos;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.item.PrimedTnt;
 import net.minecraft.world.phys.Vec3;
+import net.orbitalstrike.client.ClientSyncConfig;
+import net.orbitalstrike.client.MotionArrowMode;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -19,6 +21,9 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
  * SharedConstants.DEBUG_SHOW_LOCAL_SERVER_ENTITY_HIT_BOXES 控制。 这里不启用那套服务端侧碰撞箱，而是直接用客户端自身的
  * getDeltaMovement() 绘制： 该值由服务端通过 setEntityMotion 持续同步，因此即使客户端不再本地 tick 运动 （本 mod 为修复弱加载 TNT
  * 消失而取消了客户端模拟），箭头依然准确，且多人下同样可用。
+ *
+ * <p>画法由 ClientSyncConfig.tntMotionArrow 决定（{@link MotionArrowMode}）：与原版一致的「线段 + 箭头」、
+ * 只画线段、以及关闭。长距离高速弹道上箭头尖端会遮挡 末端位置，此时切到"仅线段"更清爽。
  *
  * <p>注：serverSide 参数仅用于匹配目标方法签名。
  */
@@ -33,9 +38,17 @@ public class EntityHitboxDebugRendererMixin {
   private void lazytntutils$drawTntMotionArrow(
       Entity entity, float partialTick, boolean serverSide, CallbackInfo ci) {
     if (!(entity instanceof PrimedTnt)) return;
+    MotionArrowMode mode = ClientSyncConfig.tntMotionArrow;
+    if (mode == MotionArrowMode.OFF) return;
+
     Vec3 motion = entity.getDeltaMovement();
     if (motion.lengthSqr() < 1.0E-8) return;
-    Vec3 pos = entity.getPosition(partialTick);
-    Gizmos.arrow(pos, pos.add(motion), MOTION_ARROW_COLOR);
+    Vec3 start = entity.getPosition(partialTick);
+    Vec3 end = start.add(motion);
+    if (mode == MotionArrowMode.ARROW) {
+      Gizmos.arrow(start, end, MOTION_ARROW_COLOR);
+    } else {
+      Gizmos.line(start, end, MOTION_ARROW_COLOR);
+    }
   }
 }

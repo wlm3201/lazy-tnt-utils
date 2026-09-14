@@ -41,6 +41,8 @@ The mod is **client-side**, with an **optional server-side** component:
 - ✅ Removes TNT white flashing and pre-explosion scaling.
 - ✅ Remaining-fuse tick counter above each TNT.
 - ✅ Render & simulation distance override.
+- ✅ Momentum vector drawn as arrow, line only, or off.
+- ✅ Removes the vanilla ±10 cap on `Motion` (fast movements set via `/summon` / `/data` are no longer zeroed).
 
 ---
 
@@ -53,6 +55,7 @@ All toggles live in the **client command** `/lazytntutils`:
 /lazytntutils <tnt|item> <client|server> <true|false>      # toggle sync
 /lazytntutils <view|sim> [default|<0..32>]                 # render / simulation distance
 /lazytntutils tnt <visual|timer> [true|false]              # visual effects / tick label
+/lazytntutils tnt arrow [arrow|line|off]                   # momentum vector style
 ```
 
 - `client` toggles apply instantly on the local client and are stored in `config/lazytntutils-client.properties`.

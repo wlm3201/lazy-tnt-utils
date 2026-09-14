@@ -14,6 +14,7 @@ import net.minecraft.network.chat.Component;
 import net.orbitalstrike.client.ClientItemStorage;
 import net.orbitalstrike.client.ClientSyncConfig;
 import net.orbitalstrike.client.ClientTntStorage;
+import net.orbitalstrike.client.MotionArrowMode;
 import net.orbitalstrike.network.ItemUpdatePayload;
 import net.orbitalstrike.network.Networking;
 import net.orbitalstrike.network.SyncConfigC2SPayload;
@@ -92,8 +93,11 @@ public class LazyTNTutilsClient implements ClientModInitializer {
    * 注册客户端统一命令，同时管理两类开关： /lazytntutils # 查询全部（client + server） /lazytntutils <tnt|item> # 查询某类型的
    * client + server /lazytntutils <tnt|item> client [true|false] # 设置“本地修正”：开 =
    * 客户端不再本地模拟、按服务端权威修正显示（持久化）；关 = 退回本地模拟 /lazytntutils <tnt|item> server [true|false] #
-   * 设置“服务端是否下发”（发包给服务端，由服务端落地；多人下决定有无权威数据） client 开关在本地即时生效并写入客户端配置；server 开关经 SyncConfigC2SPayload
-   * 交给服务端， 服务端改完会广播新的镜像回来，因此所有提示与状态始终一致。
+   * 设置“服务端是否下发”（发包给服务端，由服务端落地；多人下决定有无权威数据） /lazytntutils tnt <visual|timer> [true|false] # TNT 视效 /
+   * 刻数标签（纯客户端渲染，持久化） /lazytntutils tnt arrow [arrow|line|off] # TNT 动量矢量画法，三选项（见 MotionArrowMode）
+   * client 开关在本地即时生效并写入客户端配置；server 开关经 SyncConfigC2SPayload 交给服务端， 服务端改完会广播新的镜像回来，因此所有提示与状态始终一致。
+   * 回显粒度：不带子命令的查询（根 / 类型）给出整行状态；带 client / server 子命令时只回显该项自身。 与 visual / timer / arrow
+   * 一致——它们也各自只报自己那一项，避免改一项却刷出一整行无关开关。
    */
   private void registerClientCommand() {
     ClientCommandRegistrationCallback.EVENT.register(
@@ -117,9 +121,10 @@ public class LazyTNTutilsClient implements ClientModInitializer {
             for (String side : new String[] {"client", "server"}) {
               LiteralArgumentBuilder<FabricClientCommandSource> sideNode =
                   LiteralArgumentBuilder.literal(side);
+              // client / server 子命令只回显自己那一项（不整行重播），避免改一侧却把另一侧也刷出来。
               sideNode.executes(
                   ctx -> {
-                    sendOneStatus(ctx, type);
+                    sendSideStatus(ctx, type, side);
                     return 1;
                   });
               sideNode.then(
@@ -136,7 +141,7 @@ public class LazyTNTutilsClient implements ClientModInitializer {
                               setServerFlag(type, on);
                               ClientPlayNetworking.send(new SyncConfigC2SPayload(type, on));
                             }
-                            sendOneStatus(ctx, type);
+                            sendSideStatus(ctx, type, side);
                             return 1;
                           }));
               typeNode.then(sideNode);
@@ -183,6 +188,27 @@ public class LazyTNTutilsClient implements ClientModInitializer {
                             return 1;
                           }));
               typeNode.then(timerNode);
+
+              // TNT 动量矢量画法：三选项（线段+箭头 / 仅线段 / 关闭），立即写入客户端配置。
+              LiteralArgumentBuilder<FabricClientCommandSource> arrowNode =
+                  LiteralArgumentBuilder.literal("arrow");
+              arrowNode.executes(
+                  ctx -> {
+                    sendArrowStatus(ctx);
+                    return 1;
+                  });
+              for (MotionArrowMode mode : MotionArrowMode.values()) {
+                arrowNode.then(
+                    LiteralArgumentBuilder.<FabricClientCommandSource>literal(mode.id())
+                        .executes(
+                            ctx -> {
+                              ClientSyncConfig.tntMotionArrow = mode;
+                              ClientSyncConfig.save();
+                              sendArrowStatus(ctx);
+                              return 1;
+                            }));
+              }
+              typeNode.then(arrowNode);
             }
             root.then(typeNode);
           }
@@ -264,11 +290,6 @@ public class LazyTNTutilsClient implements ClientModInitializer {
     return b ? "开启" : "关闭";
   }
 
-  /** tick sprint 暂停期的统一后缀提示，让用户知道同步为何没生效。 */
-  private static String pauseSuffix() {
-    return ClientSyncConfig.serverPaused ? "（tick sprint 中，同步已自动暂停）" : "";
-  }
-
   private static String visualStr() {
     return ClientSyncConfig.tntNoFlashScale ? "已移除" : "已恢复";
   }
@@ -281,26 +302,50 @@ public class LazyTNTutilsClient implements ClientModInitializer {
     return ClientSyncConfig.tntTickTimer ? "开启" : "关闭";
   }
 
+  private static String arrowStr() {
+    return ClientSyncConfig.tntMotionArrow.label();
+  }
+
+  private static void sendArrowStatus(CommandContext<FabricClientCommandSource> ctx) {
+    ctx.getSource().sendFeedback(Component.literal("动量矢量：" + arrowStr()));
+  }
+
   private static void sendTimerStatus(CommandContext<FabricClientCommandSource> ctx) {
     ctx.getSource().sendFeedback(Component.literal("TNT刻数标签：" + timerStr()));
   }
 
   private static void sendOneStatus(CommandContext<FabricClientCommandSource> ctx, String type) {
-    boolean cs =
-        type.equals("tnt") ? ClientSyncConfig.tntClientSync : ClientSyncConfig.itemClientSync;
-    boolean ss =
-        type.equals("tnt") ? ClientSyncConfig.tntServerSync : ClientSyncConfig.itemServerSync;
     ctx.getSource()
         .sendFeedback(
             Component.literal(
-                "[LazyTNTutils] "
-                    + nameOf(type)
+                nameOf(type)
                     + " → 本地修正："
-                    + flagStr(cs)
+                    + flagStr(clientFlag(type))
                     + "，服务端同步："
-                    + flagStr(ss)
-                    + (type.equals("tnt") ? "，闪烁：" + visualStr() + "，刻数标签：" + timerStr() : "")
-                    + pauseSuffix()));
+                    + flagStr(serverFlag(type))
+                    + (type.equals("tnt")
+                        ? "，闪烁：" + visualStr() + "，刻数标签：" + timerStr() + "，动量矢量：" + arrowStr()
+                        : "")));
+  }
+
+  /** 只回显某一侧（本地修正 / 服务端同步）的当前值，供 client / server 子命令使用。 */
+  private static void sendSideStatus(
+      CommandContext<FabricClientCommandSource> ctx, String type, String side) {
+    boolean on = side.equals("client") ? clientFlag(type) : serverFlag(type);
+    ctx.getSource()
+        .sendFeedback(Component.literal(nameOf(type) + " → " + sideName(side) + "：" + flagStr(on)));
+  }
+
+  private static boolean clientFlag(String type) {
+    return type.equals("tnt") ? ClientSyncConfig.tntClientSync : ClientSyncConfig.itemClientSync;
+  }
+
+  private static boolean serverFlag(String type) {
+    return type.equals("tnt") ? ClientSyncConfig.tntServerSync : ClientSyncConfig.itemServerSync;
+  }
+
+  private static String sideName(String side) {
+    return side.equals("client") ? "本地修正" : "服务端同步";
   }
 
   private static void sendAllStatus(CommandContext<FabricClientCommandSource> ctx) {
@@ -319,10 +364,11 @@ public class LazyTNTutilsClient implements ClientModInitializer {
                     + visualStr()
                     + "，刻数标签："
                     + timerStr()
+                    + "，动量箭头："
+                    + arrowStr()
                     + "；渲染距离："
                     + distanceStr(ClientSyncConfig.viewDistanceOverride)
                     + "，模拟距离："
-                    + distanceStr(ClientSyncConfig.simulationDistanceOverride)
-                    + pauseSuffix()));
+                    + distanceStr(ClientSyncConfig.simulationDistanceOverride)));
   }
 }

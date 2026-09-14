@@ -2,6 +2,9 @@
 	"required": true,
 	"package": "net.orbitalstrike.mixin",
 	"compatibilityLevel": "JAVA_21",
+	"mixins": [
+		"MotionCapMixin"
+	],
 	"client": [
 		"TntEntityMixin",
 		"ItemEntityMixin",
