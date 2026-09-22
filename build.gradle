@@ -1,0 +1,102 @@
+plugins {
+	id 'net.fabricmc.fabric-loom' version "${loom_version}" apply false
+}
+
+group   = rootProject.findProperty('maven_group') ?: 'com.lazytntutils'
+version = rootProject.findProperty('mod_version')  ?: '1.0.0'
+
+subprojects {
+	apply plugin: 'net.fabricmc.fabric-loom'
+
+	group   = rootProject.group
+	version = rootProject.version
+
+	repositories {
+		maven { url = "https://maven.fabricmc.net/" }
+	}
+
+	loom {
+		splitEnvironmentSourceSets()
+
+		mods {
+			"${rootProject.findProperty('mod_id')}" {
+				sourceSet sourceSets.main
+				sourceSet sourceSets.client
+			}
+		}
+	}
+
+	// 26.x 全系使用同一套官方 Mojang 命名（非混淆），Loom 不再 remap、也不注册 modImplementation，
+	// 依赖一律用 implementation；源码因此可跨小版本直接复用：全仓库只维护根目录这一份
+	// src/main + src/client，各版本子项目仅靠自身 gradle.properties 切换依赖。
+	// 若将来某版本 API 变动大到无法共用源码，再引入版本覆盖源，或迁移 Stonecutter 预处理器。
+	sourceSets {
+		main {
+			java.srcDirs = [rootProject.file('src/main/java')]
+			resources.srcDirs = [rootProject.file('src/main/resources')]
+		}
+		client {
+			java.srcDirs = [rootProject.file('src/client/java')]
+			resources.srcDirs = [rootProject.file('src/client/resources')]
+		}
+	}
+
+	def jv = (project.hasProperty('javaRelease') ? project.javaRelease : '21') as int
+
+	dependencies {
+		minecraft "com.mojang:minecraft:${project.mc}"
+		implementation "net.fabricmc:fabric-loader:${project.loader}"
+		implementation "net.fabricmc.fabric-api:fabric-api:${project.fapi}"
+	}
+
+	processResources {
+		duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+		inputs.property "version",           project.version
+		inputs.property "minecraft_version", project.mc
+		inputs.property "loader_version",    project.loader
+		filteringCharset "UTF-8"
+		filesMatching("fabric.mod.json") {
+			expand(
+					"version":           project.version,
+					"mod_id":            rootProject.findProperty("mod_id"),
+					"mod_name":          rootProject.findProperty("mod_name"),
+					"mod_description":   rootProject.findProperty("mod_description"),
+					"mod_author":        rootProject.findProperty("mod_author"),
+					"mod_license":       rootProject.findProperty("mod_license"),
+					"mod_homepage":      rootProject.findProperty("mod_homepage"),
+					"mod_sources":       rootProject.findProperty("mod_sources"),
+					"mod_issues":        rootProject.findProperty("mod_issues"),
+					"minecraft_version": project.mc,
+					"loader_version":    project.loader
+			)
+		}
+	}
+
+	tasks.withType(JavaCompile).configureEach {
+		it.options.release = jv
+	}
+
+	java {
+		withSourcesJar()
+
+		sourceCompatibility = JavaVersion.toVersion(jv)
+		targetCompatibility = JavaVersion.toVersion(jv)
+	}
+
+	jar {
+		// 产物名带上 mod 版本与 MC 版本（lazytntutils-1.0.2-26.2.jar）：只按 MC 版本命名时，Releases 里
+		// 每次发布的附件都同名，下载到同一目录会互相覆盖、分不清是哪一版。
+		archiveFileName = "${rootProject.findProperty('mod_id')}-${project.version}-${project.mc}.jar"
+		from(rootProject.file("LICENSE")) {
+			rename { "LICENSE_${rootProject.findProperty('mod_id')}" }
+		}
+	}
+
+	sourcesJar {
+		archiveFileName = "${rootProject.findProperty('mod_id')}-${project.version}-${project.mc}-sources.jar"
+	}
+}
+
+tasks.register('buildAll') {
+	dependsOn subprojects.collect { it.tasks.named('build') }
+}
