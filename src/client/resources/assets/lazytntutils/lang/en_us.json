@@ -1,0 +1,48 @@
+{
+  "lazytntutils.config.title": "Lazy TNT Utils",
+
+  "lazytntutils.config.category.sync": "Sync",
+  "lazytntutils.config.category.render": "Rendering",
+  "lazytntutils.config.category.distance": "Distance",
+
+  "lazytntutils.config.group.tnt": "TNT",
+  "lazytntutils.config.group.item": "Items",
+  "lazytntutils.config.group.projectile": "Projectiles",
+  "lazytntutils.config.group.fallingblock": "Falling Blocks",
+  "lazytntutils.config.group.xp": "Experience Orbs",
+
+  "lazytntutils.config.option.clientSync": "Local Correction",
+  "lazytntutils.config.option.clientSync.desc.1": "The client no longer simulates entity movement locally; in singleplayer it reads from the integrated server.",
+
+  "lazytntutils.config.option.serverSync": "Server Sync",
+  "lazytntutils.config.option.serverSync.desc.1": "In multiplayer, the server sends the true entity state to the client every tick.",
+
+  "lazytntutils.config.option.tickTimer": "TNT Tick Label",
+  "lazytntutils.config.option.tickTimer.desc.1": "Show a label with the ticks left above the TNT.",
+
+  "lazytntutils.config.option.noFlashScale": "Remove TNT Flash & Scaling",
+  "lazytntutils.config.option.noFlashScale.desc.1": "Disable the white flashing when it is lit and the growing animation before it explodes.",
+
+  "lazytntutils.config.option.tntArrow": "TNT Momentum Arrow",
+  "lazytntutils.config.option.projectileArrow": "Projectile Momentum Arrow",
+  "lazytntutils.config.option.arrow.desc.1": "Draw a momentum arrow when hitboxes are shown with F3+B.",
+
+  "lazytntutils.config.option.explosionParticles": "Precise Explosion Particles",
+  "lazytntutils.config.option.explosionParticles.desc.1": "Render a single explosion particle exactly at the blast position.",
+
+  "lazytntutils.config.option.facingArrow": "Facing Arrow",
+  "lazytntutils.config.option.facingArrow.desc.1": "The entity facing arrow that vanilla draws when hitboxes are shown with F3+B.",
+
+  "lazytntutils.config.option.viewDistance": "Render Distance",
+  "lazytntutils.config.option.simDistance": "Simulation Distance",
+  "lazytntutils.config.option.distance.desc.1": "Override this distance on the server; applies to the current session only.",
+
+  "lazytntutils.config.distance.default": "Default",
+  "lazytntutils.config.distance.chunks": "%s chunks",
+
+  "lazytntutils.hud.tntFuse": "%st",
+
+  "lazytntutils.config.arrow.off": "Off",
+  "lazytntutils.config.arrow.arrow": "Line + Arrow",
+  "lazytntutils.config.arrow.line": "Line Only"
+}

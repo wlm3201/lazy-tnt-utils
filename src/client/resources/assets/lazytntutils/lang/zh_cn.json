@@ -1,0 +1,48 @@
+{
+  "lazytntutils.config.title": "Lazy TNT Utils",
+
+  "lazytntutils.config.category.sync": "同步",
+  "lazytntutils.config.category.render": "渲染",
+  "lazytntutils.config.category.distance": "距离",
+
+  "lazytntutils.config.group.tnt": "TNT",
+  "lazytntutils.config.group.item": "物品",
+  "lazytntutils.config.group.projectile": "弹射物",
+  "lazytntutils.config.group.fallingblock": "下落方块",
+  "lazytntutils.config.group.xp": "经验球",
+
+  "lazytntutils.config.option.clientSync": "本地修正",
+  "lazytntutils.config.option.clientSync.desc.1": "客户端不再本地模拟实体运动，单人游戏从集成服务端读取",
+
+  "lazytntutils.config.option.serverSync": "服务端同步",
+  "lazytntutils.config.option.serverSync.desc.1": "多人游戏服务端每刻同步实体真实状态至客户端",
+
+  "lazytntutils.config.option.tickTimer": "TNT 刻数标签",
+  "lazytntutils.config.option.tickTimer.desc.1": "TNT上方显示剩余爆炸刻数标签",
+
+  "lazytntutils.config.option.noFlashScale": "TNT移除闪烁与缩放",
+  "lazytntutils.config.option.noFlashScale.desc.1": "关闭点燃时的白色闪烁与准备爆炸时的变大动画",
+
+  "lazytntutils.config.option.tntArrow": "TNT 动量箭头",
+  "lazytntutils.config.option.projectileArrow": "弹射物动量箭头",
+  "lazytntutils.config.option.arrow.desc.1": "F3+B 显示碰撞箱时绘制动量矢量箭头",
+
+  "lazytntutils.config.option.explosionParticles": "精准爆炸粒子",
+  "lazytntutils.config.option.explosionParticles.desc.1": "爆炸粒子只在爆炸位置渲染一个",
+
+  "lazytntutils.config.option.facingArrow": "朝向箭头",
+  "lazytntutils.config.option.facingArrow.desc.1": "F3+B 显示碰撞箱时默认绘制的实体朝向箭头",
+
+  "lazytntutils.config.option.viewDistance": "渲染距离",
+  "lazytntutils.config.option.simDistance": "模拟距离",
+  "lazytntutils.config.option.distance.desc.1": "覆盖服务端的此距离，仅本次游戏生效",
+
+  "lazytntutils.config.distance.default": "默认",
+  "lazytntutils.config.distance.chunks": "%s 区块",
+
+  "lazytntutils.hud.tntFuse": "%st",
+
+  "lazytntutils.config.arrow.off": "关闭",
+  "lazytntutils.config.arrow.arrow": "线段+箭头",
+  "lazytntutils.config.arrow.line": "仅线段"
+}

@@ -1,0 +1,14 @@
+{
+	"required": true,
+	"package": "com.lazytntutils.mixin",
+	"compatibilityLevel": "JAVA_25",
+	"mixins": [
+		"MotionCapMixin"
+	],
+	"injectors": {
+		"defaultRequire": 1
+	},
+	"overwrites": {
+		"requireAnnotations": true
+	}
+}
