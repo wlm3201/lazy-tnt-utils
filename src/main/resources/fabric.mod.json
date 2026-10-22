@@ -1,37 +1,36 @@
 {
-  "schemaVersion": 1,
-  "id": "${mod_id}",
-  "version": "${version}",
-  "name": "${mod_name}",
-  "description": "${mod_description}",
-  "authors": ["${mod_author}"],
-  "contact": {
-    "homepage": "${mod_homepage}",
-    "sources": "${mod_sources}",
-    "issues": "${mod_issues}"
-  },
-  "license": "${mod_license}",
-  "icon": "assets/${mod_id}/icon.png",
-  "environment": "*",
-  "entrypoints": {
-    "main": ["com.lazytntutils.LazyTNTUtils"],
-    "client": ["com.lazytntutils.client.LazyTNTUtilsClient"],
-    "modmenu": ["com.lazytntutils.client.ModMenuIntegration"]
-  },
-  "mixins": [
-    "${mod_id}.mixins.json",
-    {
-      "config": "${mod_id}.client.mixins.json",
-      "environment": "client"
-    }
-  ],
-  "depends": {
-    "fabricloader": ">=${loader_version}",
-    "fabric-api": "*",
-    "minecraft": "~${minecraft_version}",
-    "yet_another_config_lib_v3": ">=3.9.5"
-  },
-  "suggests": {
-    "modmenu": "*"
-  }
+	"schemaVersion": 1,
+	"id": "lazytntutils",
+	"version": "${version}",
+	"name": "Lazy TNT Utils",
+	"description": "Accurate TNT and entity state in lazy chunks: fuse timers, motion vectors and precise explosion particles.",
+	"authors": ["wlm3201"],
+	"contact": {
+		"sources": "https://github.com/wlm3201/lazy-tnt-utils"
+	},
+	"license": "MIT",
+	"icon": "assets/lazytntutils/icon.png",
+	"environment": "*",
+	"entrypoints": {
+		"main": ["com.lazytntutils.LazyTNTUtils"],
+		"client": ["com.lazytntutils.client.LazyTNTUtilsClient"],
+		"modmenu": ["com.lazytntutils.client.ModMenuIntegration"]
+	},
+	"mixins": [
+		"lazytntutils.mixins.json",
+		{
+			"config": "lazytntutils.client.mixins.json",
+			"environment": "client"
+		}
+	],
+	"depends": {
+		"fabricloader": ">=0.19.5",
+		"java": ">=25",
+		"minecraft": "${minecraft_dependency}",
+		"fabric-api": "*"
+	},
+	"suggests": {
+		"modmenu": "*",
+		"yet_another_config_lib_v3": "*"
+	}
 }

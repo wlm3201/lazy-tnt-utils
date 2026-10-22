@@ -1,109 +1,69 @@
-plugins {
-	id 'net.fabricmc.fabric-loom' version "${loom_version}" apply false
-}
 
-group   = rootProject.findProperty('maven_group') ?: 'com.lazytntutils'
-version = rootProject.findProperty('mod_version')  ?: '1.0.4'
+plugins {
+	id 'base'
+	id 'net.fabricmc.fabric-loom' version "${loom_version}" apply false
+	id 'com.diffplug.spotless' version "${spotless_version}"
+}
 
 subprojects {
-	apply plugin: 'net.fabricmc.fabric-loom'
+	apply from: rootProject.file('gradle/mod.gradle')
+}
 
-	group   = rootProject.group
-	version = rootProject.version
+repositories {
+	mavenCentral()
+}
 
-	repositories {
-		maven { url = "https://maven.fabricmc.net/" }
-		maven { url = "https://maven.terraformersmc.com/" } // ModMenu
-		maven { url = "https://maven.isxander.dev/releases" } // YACL
-	}
-
-	loom {
-		splitEnvironmentSourceSets()
-
-		mods {
-			"${rootProject.findProperty('mod_id')}" {
-				sourceSet sourceSets.main
-				sourceSet sourceSets.client
-			}
-		}
-	}
-
-	// 26.x 全系使用同一套官方 Mojang 命名（非混淆），Loom 不再 remap、也不注册 modImplementation，
-	// 依赖一律用 implementation；源码因此可跨小版本直接复用：全仓库只维护根目录这一份
-	// src/main + src/client，各版本子项目仅靠自身 gradle.properties 切换依赖。
-	// 若将来某版本 API 变动大到无法共用源码，再引入版本覆盖源，或迁移 Stonecutter 预处理器。
-	sourceSets {
-		main {
-			java.srcDirs = [rootProject.file('src/main/java')]
-			resources.srcDirs = [rootProject.file('src/main/resources')]
-		}
-		client {
-			java.srcDirs = [rootProject.file('src/client/java')]
-			resources.srcDirs = [rootProject.file('src/client/resources')]
-		}
-	}
-
-	def jv = (project.hasProperty('javaRelease') ? project.javaRelease : '21') as int
-
-	dependencies {
-		minecraft "com.mojang:minecraft:${project.mc}"
-		implementation "net.fabricmc:fabric-loader:${project.loader}"
-		implementation "net.fabricmc.fabric-api:fabric-api:${project.fapi}"
-
-		// 配置界面：YACL 负责绘制，ModMenu 只负责在模组列表里挂一个"配置"按钮。
-		// 两者在 26.x 同样是 Mojang 命名、无需 remap，故与其它依赖一样用 implementation（见上方说明）。
-		// ModMenu 走 entrypoint（fabric.mod.json 的 "modmenu"），缺失时 Fabric 根本不会加载
-		// ModMenuIntegration 类，所以它在运行期是可选的（fabric.mod.json 里声明为 suggests）。
-		implementation "dev.isxander:yet-another-config-lib:${project.yacl}"
-		implementation "com.terraformersmc:modmenu:${project.modmenu}"
-	}
-
-	processResources {
-		duplicatesStrategy = DuplicatesStrategy.EXCLUDE
-		inputs.property "version",           project.version
-		inputs.property "minecraft_version", project.mc
-		inputs.property "loader_version",    project.loader
-		filteringCharset "UTF-8"
-		filesMatching("fabric.mod.json") {
-			expand(
-					"version":           project.version,
-					"mod_id":            rootProject.findProperty("mod_id"),
-					"mod_name":          rootProject.findProperty("mod_name"),
-					"mod_description":   rootProject.findProperty("mod_description"),
-					"mod_author":        rootProject.findProperty("mod_author"),
-					"mod_license":       rootProject.findProperty("mod_license"),
-					"mod_homepage":      rootProject.findProperty("mod_homepage"),
-					"mod_sources":       rootProject.findProperty("mod_sources"),
-					"mod_issues":        rootProject.findProperty("mod_issues"),
-					"minecraft_version": project.mc,
-					"loader_version":    project.loader
-			)
-		}
-	}
-
-	tasks.withType(JavaCompile).configureEach {
-		it.options.release = jv
-	}
-
+spotless {
 	java {
-		withSourcesJar()
-
-		sourceCompatibility = JavaVersion.toVersion(jv)
-		targetCompatibility = JavaVersion.toVersion(jv)
-	}
-
-	jar {
-		archiveFileName = "${rootProject.findProperty('mod_id')}-${project.version}-${project.mc}.jar"
-		from(rootProject.file("LICENSE")) {
-			rename { "LICENSE_${rootProject.findProperty('mod_id')}" }
-		}
-	}
-
-	sourcesJar {
-		archiveFileName = "${rootProject.findProperty('mod_id')}-${project.version}-${project.mc}-sources.jar"
+		target 'src/**/*.java', 'versions/*/src/**/*.java'
+		googleJavaFormat().aosp()
+		trimTrailingWhitespace()
+		endWithNewline()
 	}
 }
 
+def versionProjects = subprojects as List
+
+tasks.register('collectJars', Sync) {
+	group = 'build'
+	description = 'Collects the mod jar of every supported Minecraft version into build/libs.'
+
+	into rootProject.layout.buildDirectory.dir('libs')
+
+	versionProjects.each { p ->
+		dependsOn p.tasks.named('build')
+		from(p.layout.buildDirectory.dir('libs')) {
+			include "${p.base.archivesName.get()}-*.jar"
+			exclude '*-dev.jar'
+			exclude '*-sources*.jar'
+		}
+	}
+
+	outputs.upToDateWhen { false }
+}
+
+tasks.named('assemble') { dependsOn tasks.named('collectJars') }
+
 tasks.register('buildAll') {
-	dependsOn subprojects.collect { it.tasks.named('build') }
+	group = 'build'
+	description = 'Builds the mod jar for every supported Minecraft version.'
+	dependsOn tasks.named('collectJars')
+}
+
+def versionKey = { String version ->
+	def parts = version.tokenize('.').collect { it as int }
+	while (parts.size() < 3) {
+		parts << 0
+	}
+	parts[0] * 1000000L + parts[1] * 1000L + parts[2]
+}
+
+def latestVersionProject = versionProjects.max { a, b ->
+	versionKey(a.property('minecraft_version') as String) <=> versionKey(b.property('minecraft_version') as String)
+}
+
+tasks.register('runClient') {
+	group = 'fabric'
+	description = "Runs the development client of the newest supported version (${latestVersionProject.property('minecraft_version')})."
+	dependsOn "${latestVersionProject.path}:runClient"
 }

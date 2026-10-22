@@ -1,45 +1,53 @@
-# 构建项目；推送 v* tag 时自动构建全部版本并发布到 GitHub Release。
-# 普通 push / PR 仅做构建校验（上传 artifact）。
-
 name: build
 
 on:
   push:
     branches: [main]
-    tags: ['v*']
   pull_request:
   workflow_dispatch:
 
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   build:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-latest
+
     steps:
-      - name: checkout repository
-        uses: actions/checkout@v6
-      - name: validate gradle wrapper
-        uses: gradle/actions/wrapper-validation@v6
-      - name: setup jdk
-        uses: actions/setup-java@v5
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # gradle/mod.gradle 用 Java 25 编译，构建机必须提供同版本 JDK
+      - name: Setup Java
+        uses: actions/setup-java@v4
         with:
+          distribution: temurin
           java-version: '25'
-          distribution: 'microsoft'
-      - name: make gradle wrapper executable
-        run: chmod +x ./gradlew
-      - name: build
-        run: ./gradlew buildAll
-      - name: capture build artifacts
-        if: ${{ !startsWith(github.ref, 'refs/tags/') }}
-        uses: actions/upload-artifact@v7
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      # 包装脚本是在 Windows 上提交的，可能没有可执行位
+      - name: Build
+        run: |
+          chmod +x gradlew
+          ./gradlew build --stacktrace
+
+      - name: Read version
+        id: version
+        run: echo "value=$(sed -n 's/^version=//p' gradle.properties)" >> "$GITHUB_OUTPUT"
+
+      # 根项目收集了所有 MC 版本的产物；-dev / -sources 是开发用的中间产物
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
         with:
-          name: Artifacts
-          path: '*/build/libs/'
-      - name: release
-        if: startsWith(github.ref, 'refs/tags/')
-        uses: softprops/action-gh-release@v2
-        with:
-          files: '*/build/libs/*.jar'
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          name: lazy-tnt-utils-${{ steps.version.outputs.value }}
+          path: |
+            build/libs/*.jar
+            !build/libs/*-dev.jar
+            !build/libs/*-sources*.jar
+          if-no-files-found: error

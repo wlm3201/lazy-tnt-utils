@@ -1,6 +1,6 @@
-# Lazy TNT Utils（弱加载 TNT 可视化）
+# Lazy TNT Utils · 弱加载TNT可视化
 
-简体中文 | [English](README_EN.md)
+[English](README.en.md) | 简体中文
 
 一个 Minecraft 的 Fabric mod，在弱加载区块中准确显示 TNT 与物品实体的真实状态，主要面向弱加载 TNT 装置开发。支持 26.1.2、26.2 与 26.3。
 
